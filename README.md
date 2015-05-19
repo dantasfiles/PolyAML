@@ -1,0 +1,1 @@
+This is the language interpreter for the paper "PolyAML: A Polymorphic Aspect-oriented Functional Programmming Language" by Daniel S. Dantas, David Walker, Geoffrey Washburn & Stephanie Weirich, presented at the ACM International Conference on Functional Programming
