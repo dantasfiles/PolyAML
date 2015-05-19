@@ -1,0 +1,51 @@
+group is
+(* magic so it works on all versions of SML/NJ *)
+#if defined(NEW_CM)
+ $/basis.cm
+ $/smlnj-lib.cm
+ $/ml-yacc-lib.cm
+#else
+ "C:\\sml\\lib\\smlnj-lib.cm"
+ "C:\\sml\\lib\\ml-yacc-lib.cm"
+#endif
+
+parse.sig
+parse.sml
+
+core.sig
+core.sml
+
+id.sig
+id.sml
+
+pp.sig
+pp.sml
+
+errormsg.sml
+
+eval.sig
+eval.sml
+
+typecheck.sig
+typecheck.sml
+
+source.sig
+source.sml
+
+aspectml.lex
+aspectml.grm
+
+translate.sig
+translate.sml
+
+inference.sig
+inference.sml
+
+aspectml.sig
+aspectml.sml
+
+util.sig
+util.sml
+
+
+

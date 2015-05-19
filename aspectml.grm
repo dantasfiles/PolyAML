@@ -1,0 +1,208 @@
+open Source Util
+
+%%
+
+%term EOF
+| ALL | UNIT | STRINGTYP | STACK
+| LET | IN
+| STKCASE | TYPECASE | OF 
+| NIL 
+| BEFORE | AFTER | PC
+| ANY | REC | ADVICE | CASEADVICE
+| ARROW | DOUBLEARROW | DOUBLEPLUS
+| LPAREN | RPAREN | LBRACKET | RBRACKET | LBRACE | RBRACE
+| COLON | COMMA | PERIOD
+| UNDERSCORE | PIPE
+| EQUALS
+| ID of string
+| STRING of string
+| INTTYP | INT of int | PLUS
+| BOOL | IF | THEN | ELSE | TRUE | FALSE
+| PRINT | PRINTINT | PRINTLN | ITOS | CARET
+| SEMICOLON
+| EQEQ | ABORT
+
+
+%nonterm
+	s of polytyp
+	| ids of Id.id list
+	| some_ids of Id.id list
+	| typ of typ
+	| time of time
+	| exp of exp
+	| patexps of (pat * exp) list
+	| some_patexps of (pat * exp) list
+	| patexp of (pat * exp)
+	| typexps of (typ * exp) list
+	| some_typexps of (typ * exp) list
+	| typexp of (typ * exp)
+	| pat of pat
+	| dec of dec
+	| prog of prog
+	| rexp of exp
+
+%right ARROW
+%nonassoc ELSE IN
+%left SEMICOLON
+%left PLUS CARET
+%left EQEQ
+%left EQUALS
+%left PRINT PRINTINT PRINTLN ITOS LPAREN
+
+%verbose
+%start prog
+%eop EOF
+%noshift EOF
+%name AspectML
+%pos	int * int
+
+%value ID ("bogus")
+
+%%
+
+s: 
+	ALL ids PERIOD typ
+		(ForAllPolyTyp(ids, typ))
+	| typ
+		(ForAllPolyTyp(nil,typ))
+
+ids:
+	some_ids	(some_ids)
+	| 		(nil)
+
+some_ids:
+	ID COMMA some_ids	((Id.makeid ID) :: some_ids)
+	| ID			([Id.makeid ID])
+
+typ:
+	ID				(VarTyp (Id.makeid ID))
+	| UNIT				(UnitTyp)
+	| STRINGTYP			(StringTyp)
+	| STACK				(StackTyp)
+	| typ ARROW typ			(ArrTyp (typ1, typ2))
+	| PC LPAREN s COMMA s RPAREN	(PCTyp (s1, s2))
+	| LPAREN typ RPAREN		(typ)
+	| INTTYP			(IntTyp)
+	| BOOL				(BoolTyp)
+
+time:
+	BEFORE	(BeforeTime)
+	| AFTER	(AfterTime)
+
+rexp:
+	ID			
+		(VarExp (Id.makeid ID))
+	| LPAREN RPAREN
+		(UnitExp)
+	| STRING
+		(StringExp STRING)
+	| LPAREN exp exp RPAREN
+		(AppExp (exp1, exp2))
+	| LET dec IN exp	(LetExp (dec, exp))
+	| STKCASE exp LPAREN patexps RPAREN
+		(StkCaseExp (exp1, patexps))
+	| TYPECASE LBRACKET typ RBRACKET ID LPAREN typexps RPAREN
+		(TypeCaseExp (typ, Id.makeid ID, typexps))
+	| LBRACE ids RBRACE COLON LPAREN s COMMA s RPAREN
+		(FunsPtExp (ids, s1, s2))
+	| ANY
+		(AnyPtExp)
+	| LPAREN exp COLON typ RPAREN
+		(TyAnnExp (exp, typ))
+	| LPAREN exp RPAREN
+		(exp)
+	| INT 
+		(IntExp INT)
+	| exp PLUS exp
+		(PlusExp (exp1, exp2))
+	| TRUE
+		(BoolExp true)
+	| FALSE 
+		(BoolExp false)
+	| IF exp THEN exp ELSE exp
+		(IfExp(exp1, exp2, exp3))
+	| PRINT exp
+		(PrintExp exp)
+	| exp SEMICOLON exp 
+		(SeqExp (exp1, exp2))
+	| PRINTINT exp
+		(PrintExp (ItoSExp exp))
+	| PRINTLN exp
+		(PrintExp (ConcatExp(exp, StringExp "\n")))
+	| ITOS exp 
+		(ItoSExp exp)
+	| exp CARET exp 
+		(ConcatExp (exp1, exp2))
+	| ABORT
+		(AbortExp)
+	| exp EQEQ exp
+		(EqExp (exp1, exp2))
+
+exp: 
+    rexp (PosExp(make_pos rexpleft rexpright,rexp))
+
+patexps:
+	some_patexps	(some_patexps)
+	| 		(nil)
+
+some_patexps:
+	patexp PIPE some_patexps	
+		(patexp :: some_patexps)
+	| patexp			([patexp])
+
+patexp: 
+	pat DOUBLEARROW exp
+		((pat,exp))
+	| UNDERSCORE DOUBLEARROW exp
+		((VarPat (Id.freshid "_"), exp))
+
+typexps:
+	some_typexps	
+		(some_typexps)
+	| 		
+		(nil)
+
+some_typexps:
+	typexp PIPE some_typexps	
+		(typexp :: some_typexps)
+	| typexp			
+		([typexp])
+
+typexp: 
+	typ DOUBLEARROW exp
+		((typ,exp))
+	| UNDERSCORE DOUBLEARROW exp
+		((VarTyp (Id.freshid "_"), exp))
+
+
+pat:
+	NIL	
+		(NilPat)
+	| ID	
+		(VarPat(Id.makeid ID))
+	| UNDERSCORE DOUBLEPLUS pat
+		(AllPat(pat))
+	| exp LPAREN ID COMMA ID RPAREN DOUBLEPLUS pat
+		(PtPat(exp, Id.makeid ID1, Id.makeid ID2, pat))
+	| exp LPAREN ID COLON typ COMMA ID RPAREN DOUBLEPLUS pat
+		(AnnotPtPat(exp, Id.makeid ID1, typ, Id.makeid ID2, pat))
+
+dec:
+	REC ID LPAREN ID COLON typ RPAREN COLON typ EQUALS exp
+		(FunDec(Id.makeid ID1, Id.makeid ID2, typ1, typ2, exp))
+	| REC ID LPAREN ID RPAREN EQUALS exp
+		(InfFunDec(Id.makeid ID1, Id.makeid ID2, exp))
+	| ADVICE time exp LPAREN ID COMMA ID COMMA ID RPAREN EQUALS exp
+		(AdvDec(time, exp1, Id.makeid ID1, Id.makeid ID2, Id.makeid ID3, exp2))
+	| ADVICE time exp LPAREN ID COLON typ COMMA ID COMMA ID RPAREN EQUALS exp
+		(AnnotAdvDec(time, exp1, Id.makeid ID1, typ, Id.makeid ID2, Id.makeid ID3, exp2))
+
+	| CASEADVICE time exp LPAREN ID COLON typ COMMA ID COMMA ID RPAREN EQUALS exp
+		(CaseAdvDec(time, exp1, Id.makeid ID1, typ, Id.makeid ID2, Id.makeid ID3, exp2))
+	
+prog:
+	exp	(Prog(exp))
+
+
+
+
